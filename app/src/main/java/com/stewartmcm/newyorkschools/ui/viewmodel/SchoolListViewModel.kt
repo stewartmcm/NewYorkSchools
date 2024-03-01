@@ -19,7 +19,7 @@ class SchoolListViewModel: ViewModel() {
     private val _uiState = MutableStateFlow(SchoolUiState())
     val uiState: StateFlow<SchoolUiState> = _uiState.asStateFlow()
 
-    val schoolsListLiveData = MutableLiveData<List<SchoolData>>()
+    val schoolsListLiveData = MutableLiveData<SchoolListResponse>()
 
     /**
      * Used when navigating between screens onItemClick so that we know which school to fetch SAT data for.
@@ -41,21 +41,19 @@ class SchoolListViewModel: ViewModel() {
                 // and prevent the need for changes in the viewmodel if we make changes to our networking or db code
                 val schoolDirectory = nycOpenDataApi.getSchoolDirectory()
                     .execute()
-                    .body() ?: error
-                schoolsListLiveData.postValue(schoolDirectory)
+                    .body() ?: emptyList()
+                schoolsListLiveData.postValue(SchoolListResponse.Success(schoolDirectory))
             } catch (e: UnknownHostException) {
-                schoolsListLiveData.postValue(error)
+                schoolsListLiveData.postValue(SchoolListResponse.Error(e))
             }
         }
 
     }
 
-    // TODO: properly handle exceptions and add a separate error state Composable to SchoolListScreen.kt
-    private val error = listOf(
-        SchoolData(
-            name = "Something went wrong. Please check your network connection and try again.",
-            id = "",
-            boro = ""
-        )
-    )
+    // Represents different states for the SchoolList screen based on the network response
+    sealed class SchoolListResponse {
+        data class Success(val schools: List<SchoolData>): SchoolListResponse()
+        data class Error(val exception: Throwable): SchoolListResponse()
+        data class Loading(val msg: String): SchoolListResponse()
+    }
 }

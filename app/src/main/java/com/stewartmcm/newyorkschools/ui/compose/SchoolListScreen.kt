@@ -23,12 +23,30 @@ fun SchoolsListScreen(
     modifier: Modifier = Modifier
 ) {
     val schoolListViewModel: SchoolListViewModel = viewModel()
-    val schools by schoolListViewModel.schoolsListLiveData.observeAsState(initial = emptyList())
+    val schoolListResponse by schoolListViewModel.schoolsListLiveData.observeAsState(
+        initial = SchoolListViewModel.SchoolListResponse.Loading("loading...")
+    )
 
     // Fetch data and update the school list in the ViewModel
     schoolListViewModel.getSchools()
 
-    SchoolList(schools, onSchoolItemClicked, modifier)
+    when (schoolListResponse) {
+        is SchoolListViewModel.SchoolListResponse.Success ->  SchoolList(
+            (schoolListResponse as SchoolListViewModel.SchoolListResponse.Success).schools,
+            onSchoolItemClicked,
+            modifier
+        )
+
+        //TODO: add separate composable for error state, simply passing a dummy school list with an error message here
+        is SchoolListViewModel.SchoolListResponse.Error ->SchoolList(
+            error,
+            onSchoolItemClicked,
+            modifier
+        )
+
+        is SchoolListViewModel.SchoolListResponse.Loading ->
+            LoadingState((schoolListResponse as SchoolListViewModel.SchoolListResponse.Loading).msg)
+    }
 }
 
 @Composable
@@ -67,3 +85,17 @@ fun SchoolItem(schoolData: SchoolData,
         }
     }
 }
+
+@Composable
+private fun LoadingState(loadingMsg: String) {
+    Text(text = loadingMsg)
+}
+
+// TODO: properly handle exceptions and add a separate error state Composable to SchoolListScreen.kt
+private val error = listOf(
+    SchoolData(
+        name = "Something went wrong. Please check your network connection and try again.",
+        id = "",
+        boro = ""
+    )
+)
